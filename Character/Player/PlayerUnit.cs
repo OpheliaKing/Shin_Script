@@ -11,6 +11,10 @@ namespace OnePercent
     {
         protected override void Update()
         {
+            if (IsDieCheck())
+            {
+                return;
+            }
             base.Update();
             UpdateMove();
         }
