@@ -18,7 +18,6 @@ namespace OnePercent
 
         public void OnMove(InputValue value)
         {
-            Debug.Log(value.Get<Vector2>());
             _targetUnit.SetMoveVec(value.Get<Vector2>());
         }
     }

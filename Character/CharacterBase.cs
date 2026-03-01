@@ -22,6 +22,7 @@ namespace OnePercent
         MOVING,
         ATTACKING,
         DEAD,
+        CHASE,
     }
 
     public partial class CharacterBase : MonoBehaviour
@@ -32,6 +33,9 @@ namespace OnePercent
         {
             get => _characterType;
         }
+
+        [SerializeField]
+        protected CHARACTER_TYPE _defaultCharacterType;
 
         [SerializeField]
         protected CHARACTER_STATE _characterState;
@@ -75,6 +79,7 @@ namespace OnePercent
         [SerializeField]
         protected float _moveSpeed = 1f;
 
+        [SerializeField]
         protected Vector2 _moveVec;
 
         protected List<CharacterBase> _flockMembers = new List<CharacterBase>();
@@ -111,9 +116,10 @@ namespace OnePercent
             }
         }
 
-        public void Init()
+        public virtual void Init()
         {
-            _characterState = CHARACTER_STATE.IDLE;
+            CharacterStateChange(CHARACTER_STATE.IDLE, true);
+            ChangeCharacterType(_defaultCharacterType);
             AttackInit();
             HealthInit();
         }
@@ -138,7 +144,7 @@ namespace OnePercent
 
         }
 
-        public void ChangeCharacterType(CHARACTER_TYPE characterType)
+        public virtual void ChangeCharacterType(CHARACTER_TYPE characterType)
         {
             _characterType = characterType;
         }
@@ -175,6 +181,20 @@ namespace OnePercent
                 return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// DIE 상태에서 다른 상태로 넘어가지 못하게 예외처리
+        /// </summary>
+        /// <param name="characterState"></param>
+        /// <param name="compulsoryChange"></param>
+        protected virtual void CharacterStateChange(CHARACTER_STATE characterState, bool compulsoryChange = false)
+        {
+            if (_characterState == CHARACTER_STATE.DEAD && !compulsoryChange)
+            {
+                return;
+            }
+            _characterState = characterState;
         }
     }
 }

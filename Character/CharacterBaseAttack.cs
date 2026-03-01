@@ -40,7 +40,9 @@ namespace OnePercent
             get => _currentAttackTarget;
         }
 
+        private IEnumerator _chaseTargetCo;
         private IEnumerator _attackProcessCo;
+
 
         protected AttackDetected _attackDetected;
         protected AttackDetected AttackDetected
@@ -73,9 +75,6 @@ namespace OnePercent
                 return;
             }
             _attackTargetList.Add(target);
-
-            Debug.Log("AddAttackTarget");
-
             UpdateAttackTarget();
         }
 
@@ -91,6 +90,7 @@ namespace OnePercent
 
         private void UpdateAttackTarget()
         {
+            CharacterStateChange(CHARACTER_STATE.IDLE);
             if (_attackTargetList.Count == 0)
             {
                 _currentAttackTarget = null;
@@ -115,7 +115,16 @@ namespace OnePercent
                 else
                 {
                     //타겟 몬스터 생존시
-                    return;
+                    if (CharacterType != CHARACTER_TYPE.PLAYER)
+                    {
+                        if (gameObject.activeInHierarchy)
+                        {
+                            _chaseTargetCo = ChaseTargetCo();
+                            StartCoroutine(_chaseTargetCo);
+                        }
+
+                        return;
+                    }
                 }
             }
 
@@ -146,23 +155,105 @@ namespace OnePercent
                 return;
             }
 
-            EndAttackProcessCo();
-            _attackProcessCo = AttackProcessCo();
-            StartCoroutine(_attackProcessCo);
+            // if (CharacterType == CHARACTER_TYPE.PLAYER)
+            // {
+            //     EndAttackProcessCo();
+            //     _attackProcessCo = AttackProcessCo();
+            //     StartCoroutine(_attackProcessCo);
+            // }
+            // else
+            // {
+            //     _chaseTargetCo = ChaseTargetCo();
+            //     StartCoroutine(_chaseTargetCo);
+            // }
+
+            _chaseTargetCo = ChaseTargetCo();
+            StartCoroutine(_chaseTargetCo);
+
+            //여기서 공격 사거리 안에 있어야 공격하고 아님 이동해서 공격하는 기능 추가해야됨
+
+
+            //EndAttackProcessCo();
+            //_attackProcessCo = AttackProcessCo();
+            //StartCoroutine(_attackProcessCo);
+        }
+
+        private IEnumerator ChaseTargetCo()
+        {
+            CharacterStateChange(CHARACTER_STATE.CHASE);
+            while (true)
+            {
+                if (CurrentAttackTarget == null || CurrentAttackTarget.IsDieCheck() || !IsEnemyCheck(CurrentAttackTarget))
+                {
+                    EndChaseTargetCo();
+                    yield break;
+                }
+
+                var distance = Vector2.Distance(transform.position, CurrentAttackTarget.transform.position);
+
+                if (distance > AttackRange)
+                {
+                    //플레이어가 아닌경우 해당 캐릭터를 쫒아감
+                    if (CharacterType != CHARACTER_TYPE.PLAYER)
+                    {
+                        SetMoveVec(CurrentAttackTarget.transform.position - transform.position);
+                    }
+
+                    yield return null;
+                }
+                else
+                {
+                    EndChaseTargetCo(false);
+                    EndAttackProcessCo();
+                    _attackProcessCo = AttackProcessCo();
+                    StartCoroutine(_attackProcessCo);
+                    yield break;
+                }
+            }
+        }
+
+        private void EndChaseTargetCo(bool isUpdateAttackTarget = true)
+        {
+            CharacterStateChange(CHARACTER_STATE.IDLE);
+            if (CharacterType != CHARACTER_TYPE.PLAYER)
+            {
+                SetMoveVec(Vector2.zero);
+            }
+
+            if (_chaseTargetCo != null)
+            {
+                StopCoroutine(_chaseTargetCo);
+                _chaseTargetCo = null;
+            }
+
+            if (isUpdateAttackTarget)
+            {
+                UpdateAttackTarget();
+            }
         }
 
         private IEnumerator AttackProcessCo()
         {
-            _currentAttackDelay = _attackDelay;
+            CharacterStateChange(CHARACTER_STATE.ATTACKING);
             while (true)
             {
+                var distance = Vector2.Distance(transform.position, CurrentAttackTarget.transform.position);
+                if (distance > AttackRange)
+                {
+                    //여기가 문제
+                    // 공격 딜레이 동안 사거리를 벗어나면 어떻게 처리할지 수정해야됨
+                    EndAttackProcessCo();
+                    UpdateAttackTarget();
+                    yield break;
+                }
+
                 if (_currentAttackDelay >= _attackDelay)
                 {
                     if (CurrentAttackTarget.IsDieCheck() || !IsEnemyCheck(CurrentAttackTarget))
                     {
                         EndAttackProcessCo();
                         UpdateAttackTarget();
-                        break;
+                        yield break;
                     }
 
                     GameManager.CombatManager.DamageCalculation(this, CurrentAttackTarget);
@@ -180,16 +271,12 @@ namespace OnePercent
 
         private void EndAttackProcessCo()
         {
+            CharacterStateChange(CHARACTER_STATE.IDLE);
             if (_attackProcessCo != null)
             {
                 StopCoroutine(_attackProcessCo);
                 _attackProcessCo = null;
             }
-        }
-
-        protected virtual void Attack()
-        {
-
         }
 
         public virtual void TakeDamage(int damage)
@@ -214,11 +301,26 @@ namespace OnePercent
             }
         }
 
+        private void AllCoroutineStop()
+        {
+            if (_chaseTargetCo != null)
+            {
+                StopCoroutine(_chaseTargetCo);
+                _chaseTargetCo = null;
+            }
+            if (_attackProcessCo != null)
+            {
+                StopCoroutine(_attackProcessCo);
+                _attackProcessCo = null;
+            }
+        }
+
         protected virtual void Die()
         {
             Debug.Log($"{gameObject.name} Die");
-            _characterState = CHARACTER_STATE.DEAD;
-             OnDieEvent?.Invoke();
+            AllCoroutineStop();
+            CharacterStateChange(CHARACTER_STATE.DEAD);
+            OnDieEvent?.Invoke();
         }
     }
 

@@ -54,6 +54,12 @@ namespace OnePercent
 
         #endregion
 
+        /// <summary>
+        /// 아군 변화 테스트용 변수
+        /// </summary>
+        [SerializeField]
+        private SpriteRenderer _sprite;
+
         private IEnumerator _dieHideCo;
 
         protected override void Update()
@@ -65,9 +71,14 @@ namespace OnePercent
                 return;
             }
 
-            if (_followTarget != null)
+            UpdateMove();
+
+            if (CharacterState == CHARACTER_STATE.IDLE)
             {
-                UpdateFollow();
+                if (_followTarget != null)
+                {
+                    UpdateFollow();
+                }
             }
         }
 
@@ -184,7 +195,7 @@ namespace OnePercent
                 _dieHideCo = null;
             }
             _dieHideCo = DieHideCo();
-            GameManager.Instance.StartCoroutine(_dieHideCo);
+            StartCoroutine(_dieHideCo);
         }
 
         private IEnumerator DieHideCo()
@@ -197,7 +208,7 @@ namespace OnePercent
                 if (curHideTime >= hideTime)
                 {
                     _dieHideCo = null;
-                    //OnDieEndEvent?.Invoke();
+                    OnDieEndEvent?.Invoke();
                     yield break;
                 }
                 yield return null;
@@ -227,12 +238,38 @@ namespace OnePercent
             {
                 return;
             }
+
+            if (_dieHideCo != null)
+            {
+                StopCoroutine(_dieHideCo);
+                _dieHideCo = null;
+            }
+
             Init();
             SetFollowTarget(playerUnit);
             playerUnit.AddFlockMember(this);
 
             ChangeCharacterType(CHARACTER_TYPE.NPC_FRIENDLY);
             OnDieEvent += () => playerUnit.RemoveFlockMember(this);
+        }
+
+        public override void ChangeCharacterType(CHARACTER_TYPE characterType)
+        {
+            base.ChangeCharacterType(characterType);
+            if (characterType == CHARACTER_TYPE.NPC_FRIENDLY)
+            {
+                _sprite.color = Color.blue;
+            }
+            else
+            {
+                _sprite.color = Color.red;
+            }
+        }
+
+        protected override void UpdateMove()
+        {
+            base.UpdateMove();
+            transform.position += new Vector3(_moveVec.x, _moveVec.y, 0) * _moveSpeed * Time.deltaTime;
         }
     }
 }

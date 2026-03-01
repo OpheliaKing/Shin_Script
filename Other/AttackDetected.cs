@@ -26,7 +26,15 @@ namespace OnePercent
         public void Init(CharacterBase owner)
         {
             _owner = owner;
-            Coll.radius = owner.AttackRange;
+            if (owner.CharacterType == CHARACTER_TYPE.PLAYER)
+            {
+                Coll.radius = owner.AttackRange;
+            }
+        }
+
+        public void CollActive(bool isActive)
+        {
+            Coll.enabled = isActive;
         }
 
         public void OnTriggerEnter2D(Collider2D other)
