@@ -18,6 +18,7 @@ namespace OnePercent
 
         [SerializeField]
         private float _spawnInterval = 5f;
+        [SerializeField]
         private int _maxSpawnCount = 10;
 
         private List<CharacterBase> _currentSpawnUnitList = new List<CharacterBase>();

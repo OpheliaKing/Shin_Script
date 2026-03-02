@@ -28,6 +28,12 @@ namespace OnePercent
             var damage = attackUnit.AttackDamage;
             damagedUnit.TakeDamage(damage);
         }
+
+        public void DamageCalculation(CharacterBase attackUnit, CharacterBase damagedUnit, int damage)
+        {
+            Debug.Log("DamageCalculation" + attackUnit.name + " -> " + damagedUnit.name + " damage:" + damage);
+            damagedUnit.TakeDamage(damage);
+        }
     }
 }
 
